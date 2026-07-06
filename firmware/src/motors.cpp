@@ -16,10 +16,10 @@ void Motors::begin(uint8_t in1A, uint8_t in2A, uint8_t pwmA,
     pinMode(stby_, OUTPUT);
     digitalWrite(stby_, HIGH); // take driver out of standby
 
-    ledcAttachPin(pwmA_, 0);
-    ledcSetup(0, pwmFreqHz, pwmResolutionBits);
-    ledcAttachPin(pwmB_, 1);
-    ledcSetup(1, pwmFreqHz, pwmResolutionBits);
+    ledcAttachPin(pwmA_, channelA_);
+    ledcSetup(channelA_, pwmFreqHz, pwmResolutionBits);
+    ledcAttachPin(pwmB_, channelB_);
+    ledcSetup(channelB_, pwmFreqHz, pwmResolutionBits);
 
     stop();
 }
