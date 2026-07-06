@@ -7,6 +7,8 @@ export class SerialTransport implements Transport {
   private writer: WritableStreamDefaultWriter<string> | null = null;
   private keepReading = false;
   private events: TransportEvents | null = null;
+  private readablePipePromise: Promise<void> | null = null;
+  private writablePipePromise: Promise<void> | null = null;
 
   async connect(events: TransportEvents): Promise<void> {
     this.events = events;
@@ -19,7 +21,9 @@ export class SerialTransport implements Transport {
     await this.port.open({ baudRate: 115200 });
 
     const textEncoder = new TextEncoderStream();
-    textEncoder.readable.pipeTo(this.port.writable!);
+    this.writablePipePromise = textEncoder.readable.pipeTo(this.port.writable!).catch((err) => {
+      this.events?.onStatusChange('error', err instanceof Error ? err.message : String(err));
+    });
     this.writer = textEncoder.writable.getWriter();
 
     this.keepReading = true;
@@ -31,6 +35,7 @@ export class SerialTransport implements Transport {
     if (!this.port?.readable) return;
     const textDecoder = new TextDecoderStream();
     const readableClosed = (this.port.readable as ReadableStream<BufferSource>).pipeTo(textDecoder.writable);
+    this.readablePipePromise = readableClosed;
     const reader = textDecoder.readable.getReader();
     this.reader = reader;
 
@@ -59,17 +64,25 @@ export class SerialTransport implements Transport {
   }
 
   send(command: Command): void {
-    this.writer?.write(encodeCommand(command) + '\n').catch(() => {});
+    this.writer?.write(encodeCommand(command) + '\n').catch((err) => {
+      this.events?.onStatusChange('error', err instanceof Error ? err.message : String(err));
+    });
   }
 
   async disconnect(): Promise<void> {
     this.keepReading = false;
     await this.reader?.cancel().catch(() => {});
     await this.writer?.close().catch(() => {});
+    await Promise.all([
+      this.readablePipePromise?.catch(() => {}),
+      this.writablePipePromise?.catch(() => {}),
+    ]);
     await this.port?.close().catch(() => {});
     this.port = null;
     this.reader = null;
     this.writer = null;
+    this.readablePipePromise = null;
+    this.writablePipePromise = null;
     this.events?.onStatusChange('disconnected');
   }
 }
