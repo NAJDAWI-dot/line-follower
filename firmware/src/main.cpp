@@ -23,8 +23,7 @@ uint32_t lastTelemetryMs = 0;
 uint32_t lastLoopMs = 0;
 uint32_t lastLineSeenMs = 0;
 uint32_t lastBleTelemetryMs = 0;
-int lastAppliedLeftSpeed = 0;
-int lastAppliedRightSpeed = 0;
+int lastKnownPosition = 3500;
 
 void applyCommand(const protocol::Command& cmd) {
     switch (cmd.type) {
@@ -46,8 +45,6 @@ void applyCommand(const protocol::Command& cmd) {
         case protocol::CommandType::Stop:
             pidEnabled = false;
             motors.stop();
-            lastAppliedLeftSpeed = 0;
-            lastAppliedRightSpeed = 0;
             break;
         default:
             break;
@@ -103,34 +100,26 @@ void loop() {
 
     int error = 0;
     float pidOutput = 0.0f;
-    int leftSpeed = lastAppliedLeftSpeed;
-    int rightSpeed = lastAppliedRightSpeed;
+    int leftSpeed = 0;
+    int rightSpeed = 0;
 
     if (lineDetected) {
         lastLineSeenMs = now;
+        lastKnownPosition = position;
     }
     bool lineLost = (now - lastLineSeenMs) > LINE_LOST_TIMEOUT_MS;
 
-    if (pidEnabled && lineDetected) {
-        error = position - 3500;
+    if (pidEnabled && !lineLost) {
+        int effectivePosition = lineDetected ? position : lastKnownPosition;
+        error = effectivePosition - 3500;
         pidOutput = pid.step(static_cast<float>(error), dtSeconds);
         leftSpeed = baseSpeed + static_cast<int>(pidOutput);
         rightSpeed = baseSpeed - static_cast<int>(pidOutput);
         motors.setSpeeds(leftSpeed, rightSpeed);
-        lastAppliedLeftSpeed = leftSpeed;
-        lastAppliedRightSpeed = rightSpeed;
     } else if (pidEnabled && lineLost) {
         motors.stop();
-        leftSpeed = 0;
-        rightSpeed = 0;
-        lastAppliedLeftSpeed = 0;
-        lastAppliedRightSpeed = 0;
         pid.reset();
     }
-    // else: pidEnabled && !lineDetected && !lineLost -- transient loss within the
-    // grace window. Hold the last commanded motor speed (don't touch motors, don't
-    // feed the -1 sentinel into pid.step()); leftSpeed/rightSpeed above already
-    // reflect lastAppliedLeftSpeed/lastAppliedRightSpeed for accurate telemetry.
 
     protocol::Telemetry t{};
     t.timestampMs = now;
