@@ -45,7 +45,12 @@ describe('decodeTelemetryJson', () => {
     expect(decodeTelemetryJson('{not json')).toBeNull();
   });
 
-  test('returns null when required fields are missing', () => {
+  test('returns null when t and s are missing', () => {
+    // Payload missing t and s entirely
+    expect(decodeTelemetryJson('{"foo":1}')).toBeNull();
+  });
+
+  test('returns null when other required fields are missing', () => {
     // Payload with t and s but missing other required fields (pos, det, err, out, ls, rs, cal, pid)
     expect(decodeTelemetryJson('{"t":1,"s":[1,2,3,4,5,6,7,8]}')).toBeNull();
   });
