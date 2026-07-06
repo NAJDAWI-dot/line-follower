@@ -77,6 +77,87 @@ void test_parse_command_malformed_returns_false(void) {
     TEST_ASSERT_EQUAL(static_cast<int>(protocol::CommandType::Unknown), static_cast<int>(cmd.type));
 }
 
+void test_parse_command_start(void) {
+    const char* json = "{\"cmd\":\"start\"}";
+    protocol::Command cmd;
+    bool ok = protocol::parseCommand(json, strlen(json), &cmd);
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL(static_cast<int>(protocol::CommandType::Start), static_cast<int>(cmd.type));
+}
+
+void test_parse_command_stop(void) {
+    const char* json = "{\"cmd\":\"stop\"}";
+    protocol::Command cmd;
+    bool ok = protocol::parseCommand(json, strlen(json), &cmd);
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL(static_cast<int>(protocol::CommandType::Stop), static_cast<int>(cmd.type));
+}
+
+void test_encode_telemetry_json_all_fields_present(void) {
+    protocol::Telemetry t{};
+    t.timestampMs = 12345;
+    for (int i = 0; i < 8; i++) {
+        t.sensors[i] = i * 100;
+    }
+    t.linePosition = 3500;
+    t.lineDetected = true;
+    t.pidError = -50;
+    t.pidOutput = 1.5f;
+    t.leftSpeed = 120;
+    t.rightSpeed = 130;
+    t.calState = protocol::CalibrationState::Idle;
+    t.pidEnabled = true;
+
+    char buf[512];
+    size_t n = protocol::encodeTelemetryJson(t, buf, sizeof(buf));
+    TEST_ASSERT_GREATER_THAN(0, n);
+
+    // Verify all required fields are present
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"t\":"));          // timestamp
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"s\":"));          // sensors array
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"pos\":"));        // line position
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"det\":"));        // line detected
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"err\":"));        // PID error
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"out\":"));        // PID output
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"ls\":"));         // left speed
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"rs\":"));         // right speed
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cal\":"));        // calibration state
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"pid\":"));        // PID enabled
+}
+
+void test_encode_telemetry_json_cmin_cmax_conditional(void) {
+    // Test with Idle state: cmin/cmax should NOT be present
+    protocol::Telemetry t{};
+    t.timestampMs = 12345;
+    for (int i = 0; i < 8; i++) t.sensors[i] = 500;
+    t.linePosition = 3500;
+    t.lineDetected = true;
+    t.pidError = 0;
+    t.pidOutput = 0.0f;
+    t.leftSpeed = 100;
+    t.rightSpeed = 100;
+    t.calState = protocol::CalibrationState::Idle;
+    t.pidEnabled = true;
+
+    char buf[512];
+    size_t n = protocol::encodeTelemetryJson(t, buf, sizeof(buf));
+    TEST_ASSERT_GREATER_THAN(0, n);
+    TEST_ASSERT_NULL(strstr(buf, "\"cmin\":"));
+    TEST_ASSERT_NULL(strstr(buf, "\"cmax\":"));
+
+    // Test with Calibrating state: cmin/cmax SHOULD be present
+    t.calState = protocol::CalibrationState::Calibrating;
+    for (int i = 0; i < 8; i++) {
+        t.calMin[i] = i * 50;
+        t.calMax[i] = 1000 - (i * 50);
+    }
+
+    n = protocol::encodeTelemetryJson(t, buf, sizeof(buf));
+    TEST_ASSERT_GREATER_THAN(0, n);
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cmin\":"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"cmax\":"));
+}
+
 int main(int argc, char **argv) {
     UNITY_BEGIN();
     RUN_TEST(test_encode_telemetry_json_contains_fields);
@@ -85,5 +166,9 @@ int main(int argc, char **argv) {
     RUN_TEST(test_parse_command_set_pid);
     RUN_TEST(test_parse_command_calibrate);
     RUN_TEST(test_parse_command_malformed_returns_false);
+    RUN_TEST(test_parse_command_start);
+    RUN_TEST(test_parse_command_stop);
+    RUN_TEST(test_encode_telemetry_json_all_fields_present);
+    RUN_TEST(test_encode_telemetry_json_cmin_cmax_conditional);
     return UNITY_END();
 }
