@@ -28,10 +28,17 @@ Field meanings:
 - `s`: 8 calibrated sensor readings, 0-1000
 - `pos`: line position, 0-7000, center (on-line) = 3500, or `-1` if not detected
 - `det`: whether the line was detected this sample
-- `err`: PID error (`pos - 3500`)
+- `err`: PID error (`pos - 3500`). During a brief/transient line loss (before
+  the sustained-loss failsafe fires after `LINE_LOST_TIMEOUT_MS`), `pos`
+  reports `-1` (not detected) but `err` still reflects the control loop's
+  held last-known position, not literally `pos - 3500` for that sample.
 - `out`: raw PID output
 - `ls`/`rs`: applied left/right motor speed, -255..255
-- `cal`: calibration state — `0` idle, `1` calibrating, `2` done
+- `cal`: calibration state — `0` idle, `1` calibrating, `2` done. Note: `2`
+  is defined in the protocol but not currently emitted by the firmware,
+  which only transitions between `0` (idle) and `1` (calibrating) — a
+  consumer should treat the `1` -> `0` transition as "calibration finished"
+  instead of waiting for `2`.
 - `cmin`/`cmax`: arrays of 8 raw calibration min/max values — present only while `cal != 0`
 - `pid`: whether the PID line-following loop is currently enabled
 

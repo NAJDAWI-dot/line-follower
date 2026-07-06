@@ -31,6 +31,7 @@ constexpr uint8_t MOTOR_STBY  = 23;
 
 constexpr uint32_t TELEMETRY_HZ = 50;
 constexpr uint32_t LINE_LOST_TIMEOUT_MS = 500;
+constexpr uint16_t LINE_DETECT_THRESHOLD = 200;
 
 constexpr int PWM_FREQ = 5000;
 constexpr int PWM_RESOLUTION_BITS = 8; // duty range 0-255

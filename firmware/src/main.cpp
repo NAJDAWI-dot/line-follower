@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <cstring>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 #include "config.h"
 #include "protocol.h"
 #include "sensors.h"
@@ -16,6 +18,8 @@ PidController pid(DEFAULT_KP, DEFAULT_KI, DEFAULT_KD);
 TransportSerial serialTransport;
 TransportWifi wifiTransport;
 TransportBle bleTransport;
+
+QueueHandle_t commandQueue = nullptr;
 
 int baseSpeed = DEFAULT_BASE_SPEED;
 bool pidEnabled = false;
@@ -50,9 +54,17 @@ void applyCommand(const protocol::Command& cmd) {
             break;
     }
 }
+
+void enqueueCommand(const protocol::Command& cmd) {
+    if (commandQueue) {
+        xQueueSend(commandQueue, &cmd, 0);
+    }
+}
 } // namespace
 
 void setup() {
+    commandQueue = xQueueCreate(8, sizeof(protocol::Command));
+
     sensors.begin(SENSOR_PINS, SENSOR_EMITTER_PIN);
     motors.begin(MOTOR_A_IN1, MOTOR_A_IN2, MOTOR_A_PWM,
                  MOTOR_B_IN1, MOTOR_B_IN2, MOTOR_B_PWM,
@@ -61,8 +73,8 @@ void setup() {
     serialTransport.begin(115200);
     wifiTransport.begin(WIFI_AP_SSID, WIFI_AP_PASSWORD);
     bleTransport.begin("LineFollower");
-    wifiTransport.onCommand(applyCommand);
-    bleTransport.onCommand(applyCommand);
+    wifiTransport.onCommand(enqueueCommand);
+    bleTransport.onCommand(enqueueCommand);
 
     uint32_t now = millis();
     lastTelemetryMs = now;
@@ -74,6 +86,9 @@ void setup() {
 void loop() {
     protocol::Command cmd;
     if (serialTransport.pollCommand(&cmd)) {
+        enqueueCommand(cmd);
+    }
+    while (xQueueReceive(commandQueue, &cmd, 0) == pdTRUE) {
         applyCommand(cmd);
     }
 
@@ -96,7 +111,7 @@ void loop() {
     sensors.applyCalibration(raw, calibrated);
 
     bool lineDetected = false;
-    int position = linepos::computeLinePosition(calibrated, 200, &lineDetected);
+    int position = linepos::computeLinePosition(calibrated, LINE_DETECT_THRESHOLD, &lineDetected);
 
     int error = 0;
     float pidOutput = 0.0f;
@@ -113,12 +128,18 @@ void loop() {
         int effectivePosition = lineDetected ? position : lastKnownPosition;
         error = effectivePosition - 3500;
         pidOutput = pid.step(static_cast<float>(error), dtSeconds);
-        leftSpeed = baseSpeed + static_cast<int>(pidOutput);
-        rightSpeed = baseSpeed - static_cast<int>(pidOutput);
+        int leftSpeedRaw = baseSpeed + static_cast<int>(pidOutput);
+        int rightSpeedRaw = baseSpeed - static_cast<int>(pidOutput);
+        leftSpeed = leftSpeedRaw > 255 ? 255 : (leftSpeedRaw < -255 ? -255 : leftSpeedRaw);
+        rightSpeed = rightSpeedRaw > 255 ? 255 : (rightSpeedRaw < -255 ? -255 : rightSpeedRaw);
         motors.setSpeeds(leftSpeed, rightSpeed);
-    } else if (pidEnabled && lineLost) {
+    } else {
         motors.stop();
-        pid.reset();
+        leftSpeed = 0;
+        rightSpeed = 0;
+        if (pidEnabled) {
+            pid.reset();
+        }
     }
 
     protocol::Telemetry t{};
