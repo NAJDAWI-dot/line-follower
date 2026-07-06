@@ -3,10 +3,12 @@ import type { Transport, TransportEvents } from './Transport';
 
 export class WebSocketTransport implements Transport {
   private ws: WebSocket | null = null;
+  private events: TransportEvents | null = null;
 
   constructor(private readonly url: string = 'ws://192.168.4.1/ws') {}
 
   connect(events: TransportEvents): Promise<void> {
+    this.events = events;
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.url);
       this.ws = ws;
@@ -38,7 +40,11 @@ export class WebSocketTransport implements Transport {
   }
 
   async disconnect(): Promise<void> {
-    this.ws?.close();
-    this.ws = null;
+    if (this.ws) {
+      this.ws.onclose = null;
+      this.ws.close();
+      this.ws = null;
+    }
+    this.events?.onStatusChange('disconnected');
   }
 }
