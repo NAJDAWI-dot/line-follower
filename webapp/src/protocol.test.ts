@@ -46,7 +46,8 @@ describe('decodeTelemetryJson', () => {
   });
 
   test('returns null when required fields are missing', () => {
-    expect(decodeTelemetryJson('{"foo":1}')).toBeNull();
+    // Payload with t and s but missing other required fields (pos, det, err, out, ls, rs, cal, pid)
+    expect(decodeTelemetryJson('{"t":1,"s":[1,2,3,4,5,6,7,8]}')).toBeNull();
   });
 });
 
@@ -97,5 +98,15 @@ describe('encodeCommand', () => {
   test('serializes a calibrate command', () => {
     const json = encodeCommand({ cmd: 'calibrate', start: true });
     expect(JSON.parse(json)).toEqual({ cmd: 'calibrate', start: true });
+  });
+
+  test('serializes a start command', () => {
+    const json = encodeCommand({ cmd: 'start' });
+    expect(JSON.parse(json)).toEqual({ cmd: 'start' });
+  });
+
+  test('serializes a stop command', () => {
+    const json = encodeCommand({ cmd: 'stop' });
+    expect(JSON.parse(json)).toEqual({ cmd: 'stop' });
   });
 });

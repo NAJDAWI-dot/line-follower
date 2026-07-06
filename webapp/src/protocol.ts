@@ -39,7 +39,20 @@ export function decodeTelemetryJson(line: string): Telemetry | null {
   } catch {
     return null;
   }
-  if (typeof obj.t !== 'number' || !Array.isArray(obj.s)) return null;
+  if (
+    typeof obj.t !== 'number' ||
+    !Array.isArray(obj.s) ||
+    typeof obj.pos !== 'number' ||
+    typeof obj.det !== 'boolean' ||
+    typeof obj.err !== 'number' ||
+    typeof obj.out !== 'number' ||
+    typeof obj.ls !== 'number' ||
+    typeof obj.rs !== 'number' ||
+    typeof obj.cal !== 'number' ||
+    typeof obj.pid !== 'boolean'
+  ) {
+    return null;
+  }
   return {
     timestampMs: obj.t,
     sensors: obj.s,
