@@ -68,9 +68,10 @@ simultaneously; the web app only ever talks to "the current transport."
 
 ### Binary telemetry struct (BLE only)
 
-Packed, little-endian, ~16 bytes: 8× `uint8` sensor readings (normalized
-0–255), `int16` line position, `int16` PID error, `int8`×2 motor speeds,
-`uint16` timestamp delta. Exact field order lives in `docs/protocol.md` and
+Packed, little-endian, 17 bytes: `uint16` timestamp delta, 8× `uint8`
+sensor readings (normalized 0–255), `int16` line position, `int16` PID
+error, `int8`×2 motor speeds, `uint8` status flags. Exact field order and
+offsets live in `docs/protocol.md` and
 is mirrored by both the firmware encoder and the web app decoder so they
 can't silently drift apart.
 
