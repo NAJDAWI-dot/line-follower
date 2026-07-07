@@ -2,9 +2,11 @@ import { useConnection } from './state/useConnection';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { SensorBarGraph } from './components/SensorBarGraph';
 import { LinePositionIndicator } from './components/LinePositionIndicator';
+import { PidTuningPanel } from './components/PidTuningPanel';
+import { PidChart } from './components/PidChart';
 
 export default function App() {
-  const { status, statusMessage, telemetry, connect, disconnect } = useConnection();
+  const { status, statusMessage, telemetry, history, connect, disconnect, sendCommand } = useConnection();
 
   return (
     <div className="app">
@@ -21,6 +23,13 @@ export default function App() {
           <LinePositionIndicator linePosition={telemetry.linePosition} lineDetected={telemetry.lineDetected} />
         </>
       )}
+      <PidTuningPanel
+        onApply={sendCommand}
+        onStart={() => sendCommand({ cmd: 'start' })}
+        onStop={() => sendCommand({ cmd: 'stop' })}
+        pidEnabled={telemetry?.pidEnabled ?? false}
+      />
+      <PidChart history={history} />
     </div>
   );
 }
