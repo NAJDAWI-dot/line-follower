@@ -5,6 +5,7 @@ import { LinePositionIndicator } from './components/LinePositionIndicator';
 import { PidTuningPanel } from './components/PidTuningPanel';
 import { PidChart } from './components/PidChart';
 import { CalibrationPanel } from './components/CalibrationPanel';
+import { RecordingPanel } from './components/RecordingPanel';
 
 export default function App() {
   const { status, statusMessage, telemetry, history, connect, disconnect, sendCommand } = useConnection();
@@ -32,6 +33,7 @@ export default function App() {
       />
       <PidChart history={history} />
       <CalibrationPanel telemetry={telemetry} onSendCommand={sendCommand} />
+      <RecordingPanel telemetry={telemetry} />
     </div>
   );
 }
