@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Command, Telemetry } from '../protocol';
 import type { Transport } from '../transports/Transport';
 import { SerialTransport } from '../transports/SerialTransport';
@@ -51,13 +51,23 @@ export function useConnection() {
   }, []);
 
   const disconnect = useCallback(async () => {
-    await transportRef.current?.disconnect();
-    transportRef.current = null;
-    setStatus('disconnected');
+    try {
+      await transportRef.current?.disconnect();
+    } finally {
+      transportRef.current = null;
+      setStatus('disconnected');
+    }
   }, []);
 
   const sendCommand = useCallback((command: Command) => {
     transportRef.current?.send(command);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      transportRef.current?.disconnect().catch(() => {});
+      transportRef.current = null;
+    };
   }, []);
 
   return { status, statusMessage, telemetry, history, connect, disconnect, sendCommand };
