@@ -4,6 +4,7 @@ import { SensorBarGraph } from './components/SensorBarGraph';
 import { LinePositionIndicator } from './components/LinePositionIndicator';
 import { PidTuningPanel } from './components/PidTuningPanel';
 import { PidChart } from './components/PidChart';
+import { CalibrationPanel } from './components/CalibrationPanel';
 
 export default function App() {
   const { status, statusMessage, telemetry, history, connect, disconnect, sendCommand } = useConnection();
@@ -30,6 +31,7 @@ export default function App() {
         pidEnabled={telemetry?.pidEnabled ?? false}
       />
       <PidChart history={history} />
+      <CalibrationPanel telemetry={telemetry} onSendCommand={sendCommand} />
     </div>
   );
 }
