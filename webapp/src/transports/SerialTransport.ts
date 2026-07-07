@@ -9,6 +9,7 @@ export class SerialTransport implements Transport {
   private events: TransportEvents | null = null;
   private readablePipePromise: Promise<void> | null = null;
   private writablePipePromise: Promise<void> | null = null;
+  private intentionalDisconnect = false;
 
   async connect(events: TransportEvents): Promise<void> {
     this.events = events;
@@ -43,7 +44,12 @@ export class SerialTransport implements Transport {
     try {
       while (this.keepReading) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) {
+          if (!this.intentionalDisconnect) {
+            this.events?.onStatusChange('disconnected');
+          }
+          break;
+        }
         buffer += value;
         let newlineIndex: number;
         while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
@@ -70,6 +76,7 @@ export class SerialTransport implements Transport {
   }
 
   async disconnect(): Promise<void> {
+    this.intentionalDisconnect = true;
     this.keepReading = false;
     await this.reader?.cancel().catch(() => {});
     await this.writer?.close().catch(() => {});

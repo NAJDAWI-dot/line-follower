@@ -34,7 +34,14 @@ export function PidTuningPanel({ onApply, onStart, onStop, pidEnabled }: PidTuni
         <input type="number" min={0} max={255} value={base} onChange={(e) => setBase(Number(e.target.value))} />
       </label>
       <div className="pid-buttons">
-        <button onClick={() => onApply({ cmd: 'setPid', kp, ki, kd, base })}>Apply</button>
+        <button
+          onClick={() => {
+            if (![kp, ki, kd, base].every(Number.isFinite)) return;
+            onApply({ cmd: 'setPid', kp, ki, kd, base });
+          }}
+        >
+          Apply
+        </button>
         <button onClick={onStart} disabled={pidEnabled}>Start</button>
         <button onClick={onStop} disabled={!pidEnabled}>Stop</button>
       </div>
