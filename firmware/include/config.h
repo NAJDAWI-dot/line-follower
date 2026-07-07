@@ -5,25 +5,43 @@
 // BOARD PIN CONFIGURATION -- edit this block when switching ESP32 boards.
 // ---------------------------------------------------------------------------
 
-// QTR-8A sensor analog inputs. On classic ESP32 (WROOM-32/DevKit V1) these
-// are ALL 8 of ADC1's channels (GPIO32-39). IMPORTANT: sensor pins must stay
-// on ADC1 -- ADC2 pins (0,2,4,12-15,25-27) stop working correctly once WiFi
-// is active, since the radio and ADC2 share hardware.
-constexpr uint8_t SENSOR_PINS[8] = {32, 33, 34, 35, 36, 37, 38, 39};
+// QTR-8A sensor analog inputs, far-left (index 0) to far-right (index 7) --
+// this order must match physical left-to-right placement, since
+// line_position.cpp's weighted-centroid calc assumes it.
+//
+// KNOWN LIMITATION (accepted): indices 6-7 (GPIO 25, 26) are ADC2 channels.
+// ADC2 becomes unreliable while the ESP32 WiFi radio is active, and this
+// firmware runs a WiFi access point continuously for the WiFi transport.
+// Expect noisy/garbage readings on the two far-right sensors whenever a
+// WiFi client is connected (or the AP is simply up). USB serial and BLE
+// connections do not trigger this -- only WiFi does. If line-following
+// accuracy degrades specifically when WiFi is in use, this is why.
+constexpr uint8_t SENSOR_PINS[8] = {36, 39, 34, 35, 32, 33, 25, 26};
 
-// QTR-8A emitter (IR LED) control pin, a.k.a. LEDON. Set to 255 if your
-// module's emitters are wired always-on (no control pin used).
-constexpr uint8_t SENSOR_EMITTER_PIN = 27;
+// QTR-8A emitter (IR LED) control pin, a.k.a. LEDON. 255 = no control pin
+// (emitters wired always-on).
+constexpr uint8_t SENSOR_EMITTER_PIN = 255;
 
-// TB6612FNG motor driver pins. Chosen to avoid ESP32 strapping pins
-// (0, 2, 5, 12, 15) so motor output states at boot can't affect flash mode.
-constexpr uint8_t MOTOR_A_IN1 = 16;
-constexpr uint8_t MOTOR_A_IN2 = 17;
-constexpr uint8_t MOTOR_A_PWM = 18;
-constexpr uint8_t MOTOR_B_IN1 = 19;
-constexpr uint8_t MOTOR_B_IN2 = 21;
-constexpr uint8_t MOTOR_B_PWM = 22;
-constexpr uint8_t MOTOR_STBY  = 23;
+// TB6612FNG motor driver pins.
+//
+// KNOWN LIMITATION (accepted): MOTOR_A_PWM (15), MOTOR_A_IN1 (2), and
+// MOTOR_B_PWM (5) are ESP32 strapping pins, sampled at boot to select boot
+// mode / flash timing. A motor driver holding these lines in an unexpected
+// state during the boot window can in principle cause boot glitches; this
+// is a known ESP32 gotcha, accepted here as low-risk in practice for a
+// TB6612 (its inputs don't drive these lines during the ESP32's own boot
+// sampling window). If you see intermittent boot failures or flash-mode
+// errors, this is the first thing to suspect and remap.
+constexpr uint8_t MOTOR_A_PWM = 15;
+constexpr uint8_t MOTOR_A_IN1 = 2;
+constexpr uint8_t MOTOR_A_IN2 = 4;
+constexpr uint8_t MOTOR_B_PWM = 5;
+constexpr uint8_t MOTOR_B_IN1 = 18;
+constexpr uint8_t MOTOR_B_IN2 = 19;
+
+// STBY tied directly to 3.3V in hardware -- no GPIO control. 255 tells
+// Motors::begin() to skip configuring a standby pin.
+constexpr uint8_t MOTOR_STBY = 255;
 
 // ---------------------------------------------------------------------------
 // TUNABLES

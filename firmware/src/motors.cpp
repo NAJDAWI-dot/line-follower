@@ -13,8 +13,10 @@ void Motors::begin(uint8_t in1A, uint8_t in2A, uint8_t pwmA,
     pinMode(in2A_, OUTPUT);
     pinMode(in1B_, OUTPUT);
     pinMode(in2B_, OUTPUT);
-    pinMode(stby_, OUTPUT);
-    digitalWrite(stby_, HIGH); // take driver out of standby
+    if (stby_ != 255) {
+        pinMode(stby_, OUTPUT);
+        digitalWrite(stby_, HIGH); // take driver out of standby
+    } // else: STBY tied directly to a fixed high voltage in hardware, no GPIO control
 
     ledcAttachPin(pwmA_, channelA_);
     ledcSetup(channelA_, pwmFreqHz, pwmResolutionBits);
