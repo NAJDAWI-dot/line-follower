@@ -7,15 +7,24 @@ interface CalibrationPanelProps {
 }
 
 export function CalibrationPanel({ telemetry, onSendCommand }: CalibrationPanelProps) {
-  const [running, setRunning] = useState(false);
+  // `pending` is an optimistic bridge that makes the buttons respond
+  // immediately on click, before the next telemetry sample confirms the
+  // device's actual calState. Telemetry always wins once it arrives: a
+  // reload (or second tab) mid-calibration derives `running` straight from
+  // calState === 1, so Finish is enabled even though `pending` starts false.
+  // Firmware currently only ever reports calState 0 or 1 (never 2); the
+  // `calState !== 2` guard is forward-compatible but a no-op today, so the
+  // 1 -> 0 transition (not a 1 -> 2 transition) is what marks "finished".
+  const [pending, setPending] = useState(false);
   const calState = telemetry?.calState ?? 0;
+  const running = calState === 1 || (pending && calState !== 2);
 
   const start = () => {
-    setRunning(true);
+    setPending(true);
     onSendCommand({ cmd: 'calibrate', start: true });
   };
   const stop = () => {
-    setRunning(false);
+    setPending(false);
     onSendCommand({ cmd: 'calibrate', start: false });
   };
 
