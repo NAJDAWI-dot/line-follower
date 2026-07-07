@@ -16,6 +16,14 @@ export function useConnection() {
   const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
   const [history, setHistory] = useState<Telemetry[]>([]);
   const transportRef = useRef<Transport | null>(null);
+  const telemetryListenersRef = useRef<Set<(t: Telemetry) => void>>(new Set());
+
+  const subscribeTelemetry = useCallback((listener: (t: Telemetry) => void) => {
+    telemetryListenersRef.current.add(listener);
+    return () => {
+      telemetryListenersRef.current.delete(listener);
+    };
+  }, []);
 
   const connect = useCallback(async (kind: TransportKind) => {
     setStatus('connecting');
@@ -37,6 +45,7 @@ export function useConnection() {
             const next = [...prev, t];
             return next.length > HISTORY_LIMIT ? next.slice(next.length - HISTORY_LIMIT) : next;
           });
+          telemetryListenersRef.current.forEach((listener) => listener(t));
         },
         onStatusChange: (s, message) => {
           setStatus(s);
@@ -70,5 +79,5 @@ export function useConnection() {
     };
   }, []);
 
-  return { status, statusMessage, telemetry, history, connect, disconnect, sendCommand };
+  return { status, statusMessage, telemetry, history, connect, disconnect, sendCommand, subscribeTelemetry };
 }

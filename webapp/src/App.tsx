@@ -8,7 +8,8 @@ import { CalibrationPanel } from './components/CalibrationPanel';
 import { RecordingPanel } from './components/RecordingPanel';
 
 export default function App() {
-  const { status, statusMessage, telemetry, history, connect, disconnect, sendCommand } = useConnection();
+  const { status, statusMessage, telemetry, history, connect, disconnect, sendCommand, subscribeTelemetry } =
+    useConnection();
 
   return (
     <div className="app">
@@ -33,7 +34,7 @@ export default function App() {
       />
       <PidChart history={history} />
       <CalibrationPanel telemetry={telemetry} onSendCommand={sendCommand} />
-      <RecordingPanel telemetry={telemetry} />
+      <RecordingPanel subscribeTelemetry={subscribeTelemetry} />
     </div>
   );
 }

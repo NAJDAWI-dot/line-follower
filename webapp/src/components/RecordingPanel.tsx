@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Telemetry } from '../protocol';
 import { buildCsv, buildJson } from '../recording';
 
 interface RecordingPanelProps {
-  telemetry: Telemetry | null;
+  subscribeTelemetry: (listener: (t: Telemetry) => void) => () => void;
 }
 
 function download(filename: string, contents: string, mimeType: string): void {
@@ -16,21 +16,31 @@ function download(filename: string, contents: string, mimeType: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function RecordingPanel({ telemetry }: RecordingPanelProps) {
+export function RecordingPanel({ subscribeTelemetry }: RecordingPanelProps) {
   const [recording, setRecording] = useState(false);
   const [rows, setRows] = useState<Telemetry[]>([]);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (recording && telemetry) {
-      setRows((prev) => [...prev, telemetry]);
-    }
-  }, [telemetry, recording]);
+    return () => {
+      unsubscribeRef.current?.();
+      unsubscribeRef.current = null;
+    };
+  }, []);
 
   const start = () => {
     setRows([]);
+    unsubscribeRef.current?.();
+    unsubscribeRef.current = subscribeTelemetry((t) => {
+      setRows((prev) => [...prev, t]);
+    });
     setRecording(true);
   };
-  const stop = () => setRecording(false);
+  const stop = () => {
+    unsubscribeRef.current?.();
+    unsubscribeRef.current = null;
+    setRecording(false);
+  };
 
   return (
     <section className="panel">
