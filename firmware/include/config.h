@@ -59,5 +59,12 @@ constexpr float DEFAULT_KI = 0.0002f;
 constexpr float DEFAULT_KD = 0.6f;
 constexpr int DEFAULT_BASE_SPEED = 150; // 0-255
 
+// WiFi transport disabled: the always-on AP locks ADC2, which hard-kills
+// sensors 7-8 on GPIO25/26 (reads time out entirely, not just noise) --
+// and this board has no spare ADC1 pins to move them to. USB serial and
+// BLE remain. Set to 1 only if you drop to 6 sensors or add an external
+// ADC for the right side.
+#define ENABLE_WIFI_TRANSPORT 0
+
 constexpr const char* WIFI_AP_SSID = "LineFollower";
 constexpr const char* WIFI_AP_PASSWORD = "linefollow"; // WPA2 needs >= 8 chars

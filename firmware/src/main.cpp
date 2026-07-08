@@ -8,7 +8,9 @@
 #include "motors.h"
 #include "pid_controller.h"
 #include "transport_serial.h"
+#if ENABLE_WIFI_TRANSPORT
 #include "transport_wifi.h"
+#endif
 #include "transport_ble.h"
 
 namespace {
@@ -16,7 +18,9 @@ Sensors sensors;
 Motors motors;
 PidController pid(DEFAULT_KP, DEFAULT_KI, DEFAULT_KD);
 TransportSerial serialTransport;
+#if ENABLE_WIFI_TRANSPORT
 TransportWifi wifiTransport;
+#endif
 TransportBle bleTransport;
 
 QueueHandle_t commandQueue = nullptr;
@@ -71,9 +75,11 @@ void setup() {
                  MOTOR_STBY, PWM_FREQ, PWM_RESOLUTION_BITS);
 
     serialTransport.begin(115200);
+#if ENABLE_WIFI_TRANSPORT
     wifiTransport.begin(WIFI_AP_SSID, WIFI_AP_PASSWORD);
-    bleTransport.begin("LineFollower");
     wifiTransport.onCommand(enqueueCommand);
+#endif
+    bleTransport.begin("LineFollower");
     bleTransport.onCommand(enqueueCommand);
 
     uint32_t now = millis();
@@ -160,7 +166,9 @@ void loop() {
     }
 
     serialTransport.sendTelemetry(t);
+#if ENABLE_WIFI_TRANSPORT
     wifiTransport.sendTelemetry(t);
+#endif
 
     uint16_t bleDeltaMs = static_cast<uint16_t>(now - lastBleTelemetryMs);
     lastBleTelemetryMs = now;
